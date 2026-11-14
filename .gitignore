@@ -1,4 +1,4 @@
-SecretShush.hx
 export/
-.vscode
-
+obj/
+.vscode/
+*.hxproj.user
