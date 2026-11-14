@@ -1,0 +1,127 @@
+name: Build Game (Windows EXE + HTML5)
+
+on:
+  push:
+    branches: [main, master]
+    tags: ["v*"]          # pushing a tag like v0.0.1 creates a GitHub Release
+  workflow_dispatch:      # lets you run it manually from the Actions tab
+
+permissions:
+  contents: write         # for creating releases
+  pages: write            # for GitHub Pages deploy
+  id-token: write
+
+env:
+  HAXE_VERSION: 3.4.7     # your project uses lime 2.9.1 / openfl 3.6.1 / flixel 4.4.1 (old stack)
+
+jobs:
+  # ---------------------------------------------------------------- HTML5
+  build-html5:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: krdlab/setup-haxe@v1
+        with:
+          haxe-version: ${{ env.HAXE_VERSION }}
+
+      - name: Install libraries (versions from your .hxproj)
+        run: |
+          haxelib setup ~/haxelib
+          haxelib install lime 2.9.1
+          haxelib install openfl 3.6.1
+          haxelib install flixel 4.4.1
+          haxelib install flixel-addons 2.6.0
+          haxelib install flixel-ui 2.3.0
+          haxelib install nape 2.0.20
+          haxelib run lime setup -y
+          haxelib list
+
+      - name: Build HTML5
+        run: haxelib run lime build Project.xml html5 -final
+
+      - name: Zip HTML5 build
+        run: |
+          cd export/release/html5/bin
+          zip -r $GITHUB_WORKSPACE/MustMurderMommy-html5.zip .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: html5
+          path: export/release/html5/bin
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: html5-zip
+          path: MustMurderMommy-html5.zip
+
+      - name: Prepare for GitHub Pages
+        run: echo "ok"
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: export/release/html5/bin
+
+  deploy-pages:
+    needs: build-html5
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
+
+  # -------------------------------------------------------------- WINDOWS
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: krdlab/setup-haxe@v1
+        with:
+          haxe-version: ${{ env.HAXE_VERSION }}
+
+      - name: Install libraries
+        shell: bash
+        run: |
+          haxelib setup C:/haxelib
+          haxelib install lime 2.9.1
+          haxelib install openfl 3.6.1
+          haxelib install flixel 4.4.1
+          haxelib install flixel-addons 2.6.0
+          haxelib install flixel-ui 2.3.0
+          haxelib install nape 2.0.20
+          haxelib install hxcpp 3.4.64
+          haxelib run lime setup -y
+          haxelib list
+
+      - name: Build Windows EXE
+        run: haxelib run lime build Project.xml windows -final
+
+      - name: Zip Windows build
+        shell: pwsh
+        run: Compress-Archive -Path export/release/windows/bin/* -DestinationPath MustMurderMommy-windows.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: MustMurderMommy-windows.zip
+
+  # -------------------------------------------------------------- RELEASE
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build-html5, build-windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows
+      - uses: actions/download-artifact@v4
+        with:
+          name: html5-zip
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            MustMurderMommy-windows.zip
+            MustMurderMommy-html5.zip
