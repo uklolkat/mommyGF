@@ -12,7 +12,7 @@ permissions:
   id-token: write
 
 env:
-  HAXE_VERSION: 3.4.7     # your project uses lime 2.9.1 / openfl 3.6.1 / flixel 4.4.1 (old stack)
+  HAXE_VERSION: 3.4.7     # old stack: lime 2.9.1 / openfl 3.6.1 / flixel 4.4.1
 
 jobs:
   # ---------------------------------------------------------------- HTML5
@@ -25,15 +25,20 @@ jobs:
         with:
           haxe-version: ${{ env.HAXE_VERSION }}
 
-      - name: Install libraries (versions from your .hxproj)
+      - name: Install libraries
         run: |
           haxelib setup ~/haxelib
+          haxelib install hxcpp 3.4.64
           haxelib install lime 2.9.1
           haxelib install openfl 3.6.1
           haxelib install flixel 4.4.1
           haxelib install flixel-addons 2.6.0
           haxelib install flixel-ui 2.3.0
           haxelib install nape 2.0.20
+          haxelib set hxcpp 3.4.64
+          haxelib set lime 2.9.1
+          haxelib set openfl 3.6.1
+          haxelib set flixel 4.4.1
           haxelib run lime setup -y
           haxelib list
 
@@ -47,16 +52,8 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: html5
-          path: export/release/html5/bin
-
-      - uses: actions/upload-artifact@v4
-        with:
           name: html5-zip
           path: MustMurderMommy-html5.zip
-
-      - name: Prepare for GitHub Pages
-        run: echo "ok"
 
       - uses: actions/upload-pages-artifact@v3
         with:
@@ -64,6 +61,7 @@ jobs:
 
   deploy-pages:
     needs: build-html5
+    if: github.ref_type == 'branch'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
@@ -86,13 +84,17 @@ jobs:
         shell: bash
         run: |
           haxelib setup C:/haxelib
+          haxelib install hxcpp 3.4.64
           haxelib install lime 2.9.1
           haxelib install openfl 3.6.1
           haxelib install flixel 4.4.1
           haxelib install flixel-addons 2.6.0
           haxelib install flixel-ui 2.3.0
           haxelib install nape 2.0.20
-          haxelib install hxcpp 3.4.64
+          haxelib set hxcpp 3.4.64
+          haxelib set lime 2.9.1
+          haxelib set openfl 3.6.1
+          haxelib set flixel 4.4.1
           haxelib run lime setup -y
           haxelib list
 
